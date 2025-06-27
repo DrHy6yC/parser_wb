@@ -1,22 +1,143 @@
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+import { Bar, Line } from "react-chartjs-2";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend
+} from "chart.js";
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 export default function App() {
   const [products, setProducts] = useState([]);
+  const [minPrice, setMinPrice] = useState(0);
+  const [maxPrice, setMaxPrice] = useState(100000);
+  const [minRating, setMinRating] = useState(0);
+  const [minReviews, setMinReviews] = useState(0);
+
+  const apiHost = window.location.hostname === "localhost"
+    ? "http://localhost:8000"
+    : "http://backend:8000";
 
   useEffect(() => {
-    axios.get('http://localhost:8000/api/products/')
-      .then(res => setProducts(res.data));
-  }, []);
+    axios
+      .get(`${apiHost}/api/products/`, {
+        params: {
+          min_price: minPrice,
+          min_rating: minRating,
+          min_reviews: minReviews
+        }
+      })
+      .then(res => setProducts(res.data))
+      .catch(err => console.error("API error:", err));
+  }, [minPrice, minRating, minReviews]);
+
+  const priceBuckets = [0, 1000, 5000, 10000, 20000, 50000];
+  const priceCounts = priceBuckets.map((min, i) => {
+    const max = priceBuckets[i + 1] || Infinity;
+    return products.filter(p => p.price >= min && p.price < max).length;
+  });
+
+  const ratingDiscountData = {
+    labels: products.map(p => p.name),
+    datasets: [
+      {
+        label: "Скидка (₽)",
+        data: products.map(p => p.price - p.sale_price),
+        borderColor: "blue",
+        backgroundColor: "rgba(0, 0, 255, 0.3)",
+        tension: 0.3
+      }
+    ]
+  };
 
   return (
-    <div>
-      <h1>Товары</h1>
-      <ul>
-        {products.map(p => (
-          <li key={p.name}>{p.name} — {p.price}₽</li>
-        ))}
-      </ul>
+    <div style={{ padding: "20px" }}>
+      <h1>Аналитика товаров</h1>
+
+      <div style={{ display: "flex", gap: "20px", marginBottom: "20px" }}>
+        <label>
+          Цена от:
+          <input
+            type="number"
+            value={minPrice}
+            onChange={e => setMinPrice(+e.target.value)}
+          />
+        </label>
+        <label>
+          Рейтинг от:
+          <input
+            type="number"
+            step="0.1"
+            value={minRating}
+            onChange={e => setMinRating(+e.target.value)}
+          />
+        </label>
+        <label>
+          Отзывов от:
+          <input
+            type="number"
+            value={minReviews}
+            onChange={e => setMinReviews(+e.target.value)}
+          />
+        </label>
+      </div>
+
+      <table border="1" cellPadding="5" style={{ width: "100%" }}>
+        <thead>
+          <tr>
+            <th>Название</th>
+            <th>Цена</th>
+            <th>Цена со скидкой</th>
+            <th>Рейтинг</th>
+            <th>Отзывы</th>
+          </tr>
+        </thead>
+        <tbody>
+          {products.map(p => (
+            <tr key={p.id || p.name}>
+              <td>{p.name}</td>
+              <td>{p.price}</td>
+              <td>{p.sale_price}</td>
+              <td>{p.rating}</td>
+              <td>{p.reviews}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <h2 style={{ marginTop: "40px" }}>Распределение товаров по цене</h2>
+      <Bar
+        data={{
+          labels: ["0–1K", "1K–5K", "5K–10K", "10K–20K", "20K–50K", "50K+"],
+          datasets: [
+            {
+              label: "Количество товаров",
+              data: priceCounts,
+              backgroundColor: "rgba(75, 192, 192, 0.6)"
+            }
+          ]
+        }}
+      />
+
+      <h2 style={{ marginTop: "40px" }}>Скидка на товар vs Рейтинг</h2>
+      <Line data={ratingDiscountData} />
     </div>
   );
 }

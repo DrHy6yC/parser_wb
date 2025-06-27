@@ -1,4 +1,5 @@
 const path = require('path');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 module.exports = {
   entry: './src/index.js',
@@ -12,16 +13,21 @@ module.exports = {
       {
         test: /\.(js|jsx)$/,
         exclude: /node_modules/,
-        use: ['babel-loader']
+        use: ['babel-loader'],
       }
     ]
   },
   resolve: {
-    extensions: ['.js', '.jsx']
+    extensions: ['.js', '.jsx'],
   },
+  plugins: [
+    new HtmlWebpackPlugin({
+      template: 'public/index.html',  // Важно!
+    }),
+  ],
   devServer: {
-    static: path.join(__dirname, 'public'),
+    static: path.join(__dirname, 'dist'),
     port: 3000,
-    hot: true
-  }
+    hot: true,
+  },
 };
