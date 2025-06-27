@@ -34,6 +34,9 @@ export default function App() {
   const [sortField, setSortField] = useState("price");
   const [sortOrder, setSortOrder] = useState("asc");
   const [triggerFetch, setTriggerFetch] = useState(0);
+  const [productType, setProductType] = useState("");
+  const [availableTypes, setAvailableTypes] = useState([]);
+  const [priceLimits, setPriceLimits] = useState([0, 100000]);
 
   const apiHost =
     window.location.hostname === "localhost"
@@ -41,6 +44,36 @@ export default function App() {
       : "http://backend:8000";
 
   const [minPrice, maxPrice] = priceRange;
+
+  useEffect(() => {
+    const fetchTypes = async () => {
+      try {
+        const res = await axios.get(`${apiHost}/api/product-types/`);
+        setAvailableTypes(res.data);
+      } catch (error) {
+        console.error("Ошибка при получении типов продуктов:", error);
+      }
+    };
+    fetchTypes();
+  }, [apiHost]);
+
+  useEffect(() => {
+    const fetchPriceLimits = async () => {
+      try {
+        const res = await axios.get(`${apiHost}/api/products/`);
+        if (res.data.length > 0) {
+          const prices = res.data.map(p => p.price);
+          const min = Math.min(...prices);
+          const max = Math.max(...prices);
+          setPriceLimits([min, max]);
+          setPriceRange([min, max]);
+        }
+      } catch (error) {
+        console.error("Ошибка при определении пределов цены:", error);
+      }
+    };
+    fetchPriceLimits();
+  }, [apiHost]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -51,6 +84,7 @@ export default function App() {
             max_price: maxPrice,
             min_rating: minRating,
             min_reviews: minReviews,
+            type_product: productType,
             ordering: (sortOrder === "desc" ? "-" : "") + sortField,
           },
         });
@@ -60,7 +94,7 @@ export default function App() {
       }
     };
     fetchData();
-  }, [minPrice, maxPrice, minRating, minReviews, sortField, sortOrder, triggerFetch]);
+  }, [minPrice, maxPrice, minRating, minReviews, sortField, sortOrder, triggerFetch, productType]);
 
   const handleSort = (field) => {
     if (field === sortField) {
@@ -79,11 +113,15 @@ export default function App() {
   });
 
   const ratingDiscountData = {
-    labels: products.map((p) => p.rating).sort((a, b) => a - b),
+    labels: products
+      .map((p) => p.rating)
+      .filter((r) => typeof r === "number")
+      .sort((a, b) => a - b),
     datasets: [
       {
         label: "Скидка (₽)",
         data: products
+          .filter((p) => typeof p.rating === "number")
           .map((p) => ({ x: p.rating, y: p.discount }))
           .sort((a, b) => a.x - b.x),
         borderColor: "blue",
@@ -97,18 +135,18 @@ export default function App() {
     responsive: true,
     scales: {
       x: {
-        type: 'linear',
+        type: "linear",
         min: 0,
         max: 5,
         title: {
           display: true,
-          text: 'Рейтинг',
+          text: "Рейтинг",
         },
       },
       y: {
         title: {
           display: true,
-          text: 'Скидка (₽)',
+          text: "Скидка (₽)",
         },
       },
     },
@@ -125,8 +163,8 @@ export default function App() {
         </p>
         <Slider
           range
-          min={0}
-          max={100000}
+          min={priceLimits[0]}
+          max={priceLimits[1]}
           step={500}
           value={priceRange}
           onChange={setPriceRange}
@@ -150,6 +188,15 @@ export default function App() {
             value={minReviews}
             onChange={(e) => setMinReviews(+e.target.value)}
           />
+        </label>
+        <label>
+          Тип продукта:
+          <select value={productType} onChange={(e) => setProductType(e.target.value)}>
+            <option value="">Все</option>
+            {availableTypes.map((type) => (
+              <option key={type} value={type}>{type}</option>
+            ))}
+          </select>
         </label>
       </div>
 

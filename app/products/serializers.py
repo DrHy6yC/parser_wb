@@ -6,7 +6,7 @@ class ProductSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Product
-        fields = ['id', 'name', 'name_product', 'price', 'sale_price', 'rating', 'reviews', 'discount']
+        fields = ['id', 'name', 'type_product', 'price', 'sale_price', 'rating', 'reviews', 'discount']
 
     def get_discount(self, obj):
         return obj.price - obj.sale_price

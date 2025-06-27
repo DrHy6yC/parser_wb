@@ -1,5 +1,6 @@
 from django.shortcuts import render
 from rest_framework import generics, status
+from rest_framework.decorators import api_view
 from rest_framework.filters import OrderingFilter
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -21,7 +22,7 @@ class ProductListView(generics.ListAPIView):
     serializer_class = ProductSerializer
     queryset = Product.objects.all()
     filter_backends = [OrderingFilter]
-    ordering_fields = ['name', 'name_product', 'price', 'sale_price', 'rating', 'reviews']
+    ordering_fields = ['name', 'type_product', 'price', 'sale_price', 'rating', 'reviews']
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -31,6 +32,8 @@ class ProductListView(generics.ListAPIView):
         max_price = params.get('max_price')
         min_rating = params.get('min_rating')
         min_reviews = params.get('min_reviews')
+        type_product = params.get('type_product')
+        ordering = params.get('ordering')
 
         if min_price:
             qs = qs.filter(price__gte=min_price)
@@ -40,9 +43,20 @@ class ProductListView(generics.ListAPIView):
             qs = qs.filter(rating__gte=min_rating)
         if min_reviews:
             qs = qs.filter(reviews__gte=min_reviews)
+        if type_product:
+            qs = qs.filter(type_product__icontains=type_product)
+
+        if ordering:
+            qs = qs.order_by(ordering)
 
         return qs
 
 
 def product_table_view(request):
     return render(request, 'products/table.html')
+
+
+@api_view(["GET"])
+def product_types_view(request):
+    types = Product.objects.values_list("type_product", flat=True).distinct()
+    return Response(types)
