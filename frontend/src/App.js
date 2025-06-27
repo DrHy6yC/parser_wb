@@ -1,4 +1,3 @@
-// src/App.js
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Bar, Line } from "react-chartjs-2";
@@ -34,6 +33,7 @@ export default function App() {
   const [minReviews, setMinReviews] = useState(0);
   const [sortField, setSortField] = useState("price");
   const [sortOrder, setSortOrder] = useState("asc");
+  const [triggerFetch, setTriggerFetch] = useState(0);
 
   const apiHost =
     window.location.hostname === "localhost"
@@ -43,27 +43,33 @@ export default function App() {
   const [minPrice, maxPrice] = priceRange;
 
   useEffect(() => {
-    axios
-      .get(`${apiHost}/api/products/`, {
-        params: {
-          min_price: minPrice,
-          max_price: maxPrice,
-          min_rating: minRating,
-          min_reviews: minReviews,
-          ordering: (sortOrder === "desc" ? "-" : "") + sortField,
-        },
-      })
-      .then((res) => setProducts(res.data))
-      .catch((err) => console.error("API error:", err));
-  }, [priceRange, minRating, minReviews, sortField, sortOrder]);
+    const fetchData = async () => {
+      try {
+        const res = await axios.get(`${apiHost}/api/products/`, {
+          params: {
+            min_price: minPrice,
+            max_price: maxPrice,
+            min_rating: minRating,
+            min_reviews: minReviews,
+            ordering: (sortOrder === "desc" ? "-" : "") + sortField,
+          },
+        });
+        setProducts(res.data);
+      } catch (error) {
+        console.error("Ошибка при получении данных:", error);
+      }
+    };
+    fetchData();
+  }, [minPrice, maxPrice, minRating, minReviews, sortField, sortOrder, triggerFetch]);
 
   const handleSort = (field) => {
     if (field === sortField) {
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
     } else {
       setSortField(field);
       setSortOrder("asc");
     }
+    setTriggerFetch((prev) => prev + 1);
   };
 
   const priceBuckets = [0, 1000, 5000, 10000, 20000, 50000];
@@ -73,16 +79,39 @@ export default function App() {
   });
 
   const ratingDiscountData = {
-    labels: products.map((p) => p.name),
+    labels: products.map((p) => p.rating).sort((a, b) => a - b),
     datasets: [
       {
         label: "Скидка (₽)",
-        data: products.map((p) => p.price - p.sale_price),
+        data: products
+          .map((p) => ({ x: p.rating, y: p.discount }))
+          .sort((a, b) => a.x - b.x),
         borderColor: "blue",
         backgroundColor: "rgba(0, 0, 255, 0.3)",
         tension: 0.3,
       },
     ],
+  };
+
+  const ratingDiscountOptions = {
+    responsive: true,
+    scales: {
+      x: {
+        type: 'linear',
+        min: 0,
+        max: 5,
+        title: {
+          display: true,
+          text: 'Рейтинг',
+        },
+      },
+      y: {
+        title: {
+          display: true,
+          text: 'Скидка (₽)',
+        },
+      },
+    },
   };
 
   return (
@@ -162,7 +191,7 @@ export default function App() {
       />
 
       <h2 style={{ marginTop: "40px" }}>Скидка на товар vs Рейтинг</h2>
-      <Line data={ratingDiscountData} />
+      <Line data={ratingDiscountData} options={ratingDiscountOptions} />
     </div>
   );
 }

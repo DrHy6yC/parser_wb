@@ -1,15 +1,30 @@
 from django.shortcuts import render
-from rest_framework import generics
+from rest_framework import generics, status
+from rest_framework.filters import OrderingFilter
+from rest_framework.views import APIView
+from rest_framework.response import Response
 
 from .models import Product
+from .parser import parse_wildberries
 from .serializers import ProductSerializer
+
+
+class ProductParseView(APIView):
+    def get(self, request, product_name):
+        products = parse_wildberries(product_name)
+        if products:
+            return Response(products, status=status.HTTP_200_OK)
+        return Response({"detail": "Nothing found or error"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ProductListView(generics.ListAPIView):
     serializer_class = ProductSerializer
+    queryset = Product.objects.all()
+    filter_backends = [OrderingFilter]
+    ordering_fields = ['name', 'price', 'sale_price', 'rating', 'reviews']
 
     def get_queryset(self):
-        qs = Product.objects.all()
+        qs = super().get_queryset()
         params = self.request.query_params
 
         min_price = params.get('min_price')
