@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Аналитика товаров</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; }
+    th { cursor: pointer; }
+    label { margin-right: 10px; }
+    select, input { margin-left: 5px; }
+  </style>
+</head>
+<body>
+  <h1>Аналитика товаров</h1>
+
+  <form method="get">
+    <label>
+      Рейтинг от:
+      <input type="number" step="0.1" name="min_rating" value="{{ request.GET.min_rating|default_if_none:'' }}">
+    </label>
+    <label>
+      Отзывов от:
+      <input type="number" name="min_reviews" value="{{ request.GET.min_reviews|default_if_none:'' }}">
+    </label>
+    <label>
+      Тип продукта:
+      <select name="type_product">
+        <option value="">Все</option>
+        {% for tp in types %}
+          <option value="{{ tp }}" {% if request.GET.type_product == tp %}selected{% endif %}>{{ tp }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      Сортировка:
+      <select name="ordering">
+        <option value="price" {% if request.GET.ordering == "price" %}selected{% endif %}>Цена ↑</option>
+        <option value="-price" {% if request.GET.ordering == "-price" %}selected{% endif %}>Цена ↓</option>
+        <option value="sale_price" {% if request.GET.ordering == "sale_price" %}selected{% endif %}>Цена со скидкой ↑</option>
+        <option value="-sale_price" {% if request.GET.ordering == "-sale_price" %}selected{% endif %}>Цена со скидкой ↓</option>
+        <option value="rating" {% if request.GET.ordering == "rating" %}selected{% endif %}>Рейтинг ↑</option>
+        <option value="-rating" {% if request.GET.ordering == "-rating" %}selected{% endif %}>Рейтинг ↓</option>
+        <option value="reviews" {% if request.GET.ordering == "reviews" %}selected{% endif %}>Отзывы ↑</option>
+        <option value="-reviews" {% if request.GET.ordering == "-reviews" %}selected{% endif %}>Отзывы ↓</option>
+      </select>
+    </label>
+    <button type="submit">Применить</button>
+  </form>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Название</th>
+        <th>Цена</th>
+        <th>Цена со скидкой</th>
+        <th>Рейтинг</th>
+        <th>Отзывы</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in products %}
+        <tr>
+          <td>{{ p.name }}</td>
+          <td>{{ p.price }}</td>
+          <td>{{ p.sale_price }}</td>
+          <td>{{ p.rating }}</td>
+          <td>{{ p.reviews }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Скидка на товар vs Рейтинг</h2>
+  <canvas id="ratingChart" width="800" height="400"></canvas>
+
+  <script>
+    const ratingData = {
+      datasets: [{
+        label: "Скидка (₽)",
+        data: [
+          {% for p in products %}
+            {% if p.rating and p.price and p.sale_price %}
+              { x: {{ p.rating }}, y: {{ p.discount }} },
+            {% endif %}
+          {% endfor %}
+        ],
+        backgroundColor: "rgba(54, 162, 235, 0.5)",
+        borderColor: "blue",
+        tension: 0.4
+      }]
+    };
+
+    const ratingConfig = {
+      type: 'line',
+      data: ratingData,
+      options: {
+        responsive: true,
+        scales: {
+          x: {
+            type: 'linear',
+            min: 0,
+            max: 5,
+            title: {
+              display: true,
+              text: "Рейтинг"
+            }
+          },
+          y: {
+            title: {
+              display: true,
+              text: "Скидка (₽)"
+            }
+          }
+        }
+      }
+    };
+
+    new Chart(document.getElementById("ratingChart"), ratingConfig);
+  </script>
+</body>
+</html>
