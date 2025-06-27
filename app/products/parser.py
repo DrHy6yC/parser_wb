@@ -1,14 +1,14 @@
 import requests
 from .models import Product
 
-def parse_wildberries(query):
+def parse_wildberries(name_product):
     headers = {
         "User-Agent": "Mozilla/5.0"
     }
 
     url = f"https://search.wb.ru/exactmatch/ru/common/v4/search"
     params = {
-        "query": query,
+        "query": name_product,
         "dest": "-1257786",  # Москва
         "resultset": "catalog",
         "sort": "popular",
@@ -26,7 +26,7 @@ def parse_wildberries(query):
         data = response.json()
         products = data.get("data", {}).get("products", [])
         if not products:
-            print(f"[WB] Товары не найдены по запросу: {query}")
+            print(f"[WB] Товары не найдены по запросу: {name_product}")
             return []
 
         result = []
@@ -49,6 +49,7 @@ def parse_wildberries(query):
 
             result.append({
                 "name": name,
+                "name_product": name_product,
                 "price": price,
                 "sale_price": sale_price,
                 "rating": rating,
