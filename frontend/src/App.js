@@ -1,3 +1,4 @@
+// src/App.js
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Bar, Line } from "react-chartjs-2";
@@ -49,26 +50,12 @@ export default function App() {
           max_price: maxPrice,
           min_rating: minRating,
           min_reviews: minReviews,
+          ordering: (sortOrder === "desc" ? "-" : "") + sortField,
         },
       })
       .then((res) => setProducts(res.data))
       .catch((err) => console.error("API error:", err));
-  }, [priceRange, minRating, minReviews]);
-
-  const sortedProducts = [...products].sort((a, b) => {
-    if (!sortField) return 0;
-
-    const aVal = a[sortField];
-    const bVal = b[sortField];
-
-    if (typeof aVal === "string") {
-      return sortOrder === "asc"
-        ? aVal.localeCompare(bVal)
-        : bVal.localeCompare(aVal);
-    }
-
-    return sortOrder === "asc" ? aVal - bVal : bVal - aVal;
-  });
+  }, [priceRange, minRating, minReviews, sortField, sortOrder]);
 
   const handleSort = (field) => {
     if (field === sortField) {
@@ -148,7 +135,7 @@ export default function App() {
           </tr>
         </thead>
         <tbody>
-          {sortedProducts.map((p) => (
+          {products.map((p) => (
             <tr key={p.id || p.name}>
               <td>{p.name}</td>
               <td>{p.price}</td>
