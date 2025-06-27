@@ -1,11 +1,15 @@
 import requests
 from .models import Product
 
-def parse_wildberries(query):
-    url = "https://search.wb.ru/exactmatch/ru/common/v4/search"
+def parse_wildberries(type_product):
+    headers = {
+        "User-Agent": "Mozilla/5.0"
+    }
+
+    url = f"https://search.wb.ru/exactmatch/ru/common/v4/search"
     params = {
-        "query": query,
-        "dest": "-1257786",   # Москва
+        "query": type_product,
+        "dest": "-1257786",  # Москва
         "resultset": "catalog",
         "sort": "popular",
         "spp": "30",
@@ -15,36 +19,47 @@ def parse_wildberries(query):
         "Accept": "application/json",
     }
 
-    response = requests.get(url, params=params, headers=headers)
-
     try:
+        response = requests.get(url, params=params, headers=headers)
+        response.raise_for_status()
+
         data = response.json()
-
-        # Проверка содержимого
-        products = data.get('data', {}).get('products', [])
+        products = data.get("data", {}).get("products", [])
         if not products:
-            print("Нет товаров для запроса.")
-            return
+            print(f"[WB] Товары не найдены по запросу: {type_product}")
+            return []
 
+        result = []
         for item in products:
             name = item.get("name", "")
             price = item.get("priceU", 0) // 100
             sale_price = item.get("salePriceU", 0) // 100
-            rating = item.get("reviewRating", 0.0)
+            rating = item.get("reviewRating", 0)
             reviews = item.get("feedbacks", 0)
 
-            Product.objects.update_or_create(
-                name=name,
-                defaults={
-                    "price": price,
-                    "sale_price": sale_price,
-                    "rating": rating,
-                    "reviews": reviews,
-                }
-            )
 
-        print(f"Сохранено товаров: {len(products)}")
+            if not Product.objects.filter(name=name, price=price, sale_price=sale_price).exists():
+                Product.objects.create(
+                    name=name,
+                    type_product=type_product,
+                    price=price,
+                    sale_price=sale_price,
+                    rating=rating,
+                    reviews=reviews,
+                )
+
+            result.append({
+                "name": name,
+                "type_product": type_product,
+                "price": price,
+                "sale_price": sale_price,
+                "rating": rating,
+                "reviews": reviews,
+                "discount": price - sale_price,
+            })
+
+        return result
 
     except Exception as e:
-        print("Ошибка парсинга:", e)
-        print("Ответ:", response.text)
+        print(f"[WB Parser] Ошибка при запросе: {e}")
+        return []
