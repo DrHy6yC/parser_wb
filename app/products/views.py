@@ -84,8 +84,10 @@ class DashboardView(View):
                 (p.rating, p.discount)
                 for p in products
                 if isinstance(p.rating, (int, float))
+                and isinstance(p.discount, (int, float))
+                and p.discount >= 0
             ],
-            key=lambda x: x[0],
+            key=lambda x: (x[0], x[1]),
         )
         ratings = [x[0] for x in discount_data]
         discounts = [x[1] for x in discount_data]

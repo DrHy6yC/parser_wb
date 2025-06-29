@@ -92,9 +92,17 @@ export default function App() {
       {
         label: "Скидка (₽)",
         data: products
-          .filter((p) => typeof p.rating === "number" && typeof p.discount === "number")
+          .filter(
+            (p) =>
+              typeof p.rating === "number" &&
+              typeof p.discount === "number" &&
+              p.discount >= 0
+          )
           .map((p) => ({ x: p.rating, y: p.discount }))
-          .sort((a, b) => a.x - b.x),
+          .sort((a, b) => {
+            if (a.x === b.x) return a.y - b.y; // сортировка по скидке при одинаковом рейтинге
+            return a.x - b.x; // сортировка по рейтингу
+          }),
         borderColor: "blue",
         backgroundColor: "rgba(0, 0, 255, 0.3)",
         tension: 0.3,
