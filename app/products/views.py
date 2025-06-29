@@ -5,10 +5,10 @@ from rest_framework.filters import OrderingFilter
 from rest_framework.generics import GenericAPIView, ListAPIView
 from rest_framework.response import Response
 
-from .models import Product
-from .parser import parse_wildberries
-from .serializers import ProductSerializer
-from .utils import get_filtered_products, get_product_types
+from products.models import Product
+from products.serializers import ProductSerializer
+from products.utils import get_filtered_products, get_product_types
+from products.utils import parse_wildberries
 
 
 class ProductParseView(GenericAPIView):
@@ -36,10 +36,6 @@ class ProductListView(ListAPIView):
 
     def get_queryset(self):
         return get_filtered_products(self.request)
-
-
-def product_table_view(request):
-    return render(request, "products/table.html")
 
 
 class ProductTypesView(GenericAPIView):
@@ -73,9 +69,3 @@ class DashboardView(View):
                 "headers": headers,
             },
         )
-
-
-class ProductTypesView(GenericAPIView):
-    def get(self, request):
-        types = get_product_types()
-        return Response(types)
