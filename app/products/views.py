@@ -1,3 +1,4 @@
+from django.db.models import Max, Min
 from django.shortcuts import render
 from django.views import View
 from rest_framework import status
@@ -46,19 +47,44 @@ class ProductTypesView(GenericAPIView):
 
 class DashboardView(View):
     def get(self, request):
+        # Продукты с учётом фильтров
         products = get_filtered_products(request)
 
+        # Добавим поле discount вручную
         for p in products:
-            p.discount = p.price - p.sale_price if p.price and p.sale_price else 0
+            p.discount = (p.price or 0) - (p.sale_price or 0)
 
+        # Все типы продуктов
         product_types = get_product_types()
-        headers = {
-            "Название": "name",
-            "Цена": "price",
-            "Цена со скидкой": "sale_price",
-            "Рейтинг": "rating",
-            "Отзывы": "reviews",
-        }
+
+        # Минимальная и максимальная цена
+        all_products = Product.objects.all()
+        price_limits = [
+            all_products.aggregate(Min("price"))["price__min"] or 0,
+            all_products.aggregate(Max("price"))["price__max"] or 100000,
+        ]
+
+        # Распределение по ценовым диапазонам
+        price_buckets = [0, 1000, 5000, 10000, 20000, 50000]
+        price_counts = []
+        for i in range(len(price_buckets)):
+            min_price = price_buckets[i]
+            max_price = price_buckets[i + 1] if i + 1 < len(price_buckets) else None
+            if max_price:
+                count = products.filter(
+                    price__gte=min_price, price__lt=max_price
+                ).count()
+            else:
+                count = products.filter(price__gte=min_price).count()
+            price_counts.append(count)
+
+        # Данные для графика: скидка vs рейтинг
+        ratings = []
+        discounts = []
+        for p in products:
+            if isinstance(p.rating, (int, float)):
+                ratings.append(p.rating)
+                discounts.append(p.discount)
 
         return render(
             request,
@@ -66,6 +92,9 @@ class DashboardView(View):
             {
                 "products": products,
                 "product_types": product_types,
-                "headers": headers,
+                "price_limits": price_limits,
+                "price_counts": price_counts,
+                "ratings": ratings,
+                "discounts": discounts,
             },
         )

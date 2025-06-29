@@ -1,100 +1,132 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <title>Аналитика товаров</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    th, td { border: 1px solid #ccc; padding: 8px; }
-    th { cursor: pointer; }
-    label { margin-right: 10px; }
-    select, input { margin-left: 5px; }
-  </style>
+    <meta charset="UTF-8">
+    <title>Аналитика товаров</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.7.0/nouislider.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.7.0/nouislider.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+          font-family: Arial, sans-serif;
+          padding: 20px;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 20px;
+        }
+        th, td {
+          border: 1px solid #ccc;
+          padding: 8px;
+          text-align: center;
+        }
+        th {
+          cursor: pointer;
+        }
+    </style>
 </head>
 <body>
-  <h1>Аналитика товаров</h1>
+<h1>Аналитика товаров</h1>
 
-  <form method="get">
-    <label>
-      Рейтинг от:
-      <input type="number" step="0.1" name="min_rating" value="{{ request.GET.min_rating|default_if_none:'' }}">
-    </label>
-    <label>
-      Отзывов от:
-      <input type="number" name="min_reviews" value="{{ request.GET.min_reviews|default_if_none:'' }}">
-    </label>
-    <label>
-      Тип продукта:
-      <select name="type_product">
-        <option value="">Все</option>
-        {% for tp in types %}
-          <option value="{{ tp }}" {% if request.GET.type_product == tp %}selected{% endif %}>{{ tp }}</option>
-        {% endfor %}
-      </select>
-    </label>
-    <label>
-      Сортировка:
-      <select name="ordering">
-        <option value="price" {% if request.GET.ordering == "price" %}selected{% endif %}>Цена ↑</option>
-        <option value="-price" {% if request.GET.ordering == "-price" %}selected{% endif %}>Цена ↓</option>
-        <option value="sale_price" {% if request.GET.ordering == "sale_price" %}selected{% endif %}>Цена со скидкой ↑</option>
-        <option value="-sale_price" {% if request.GET.ordering == "-sale_price" %}selected{% endif %}>Цена со скидкой ↓</option>
-        <option value="rating" {% if request.GET.ordering == "rating" %}selected{% endif %}>Рейтинг ↑</option>
-        <option value="-rating" {% if request.GET.ordering == "-rating" %}selected{% endif %}>Рейтинг ↓</option>
-        <option value="reviews" {% if request.GET.ordering == "reviews" %}selected{% endif %}>Отзывы ↑</option>
-        <option value="-reviews" {% if request.GET.ordering == "-reviews" %}selected{% endif %}>Отзывы ↓</option>
-      </select>
-    </label>
-    <button type="submit">Применить</button>
-  </form>
+<form method="get">
+    <div style="margin-bottom: 20px;">
+        <h3>Фильтр по цене</h3>
+        <p>
+            Цена: от <b id="min-price-label"></b> ₽ до <b id="max-price-label"></b> ₽
+        </p>
+        <div id="price-slider"></div>
+    </div>
 
-  <table>
+    <label>Рейтинг от:
+        <input type="number" name="min_rating" value="{{ request.GET.min_rating }}" step="0.1"
+               onchange="this.form.submit()">
+    </label>
+    <label>Отзывов от:
+        <input type="number" name="min_reviews" value="{{ request.GET.min_reviews }}"
+               onchange="this.form.submit()">
+    </label>
+    <label>Тип продукта:
+        <select name="type_product" onchange="this.form.submit()">
+            <option value="">Все</option>
+            {% for type in product_types %}
+            <option value="{{ type }}" {% if request.GET.type_product == type %}selected{% endif %}>{{ type }}</option>
+            {% endfor %}
+        </select>
+    </label>
+</form>
+
+<table>
     <thead>
-      <tr>
-        <th>Название</th>
-        <th>Цена</th>
-        <th>Цена со скидкой</th>
-        <th>Рейтинг</th>
-        <th>Отзывы</th>
-      </tr>
+    <tr>
+        <th onclick="sortTable('name')">Название</th>
+        <th onclick="sortTable('price')">Цена</th>
+        <th onclick="sortTable('sale_price')">Цена со скидкой</th>
+        <th onclick="sortTable('rating')">Рейтинг</th>
+        <th onclick="sortTable('reviews')">Отзывы</th>
+    </tr>
     </thead>
-    <tbody>
-      {% for p in products %}
-        <tr>
-          <td>{{ p.name }}</td>
-          <td>{{ p.price }}</td>
-          <td>{{ p.sale_price }}</td>
-          <td>{{ p.rating }}</td>
-          <td>{{ p.reviews }}</td>
-        </tr>
-      {% endfor %}
+    <tbody id="products-table">
+    {% for p in products %}
+    <tr>
+        <td>{{ p.name }}</td>
+        <td>{{ p.price }}</td>
+        <td>{{ p.sale_price }}</td>
+        <td>{{ p.rating }}</td>
+        <td>{{ p.reviews }}</td>
+    </tr>
+    {% endfor %}
     </tbody>
-  </table>
+</table>
 
-  <h2>Скидка на товар vs Рейтинг</h2>
-  <canvas id="ratingChart" width="800" height="400"></canvas>
+<h2>Распределение товаров по цене</h2>
+<canvas id="priceChart" width="600" height="400"></canvas>
 
-  <script>
-    const ratingData = {
-      datasets: [{
-        label: "Скидка (₽)",
-        data: [
-          {% for p in products %}
-            {% if p.rating and p.price and p.sale_price %}
-              { x: {{ p.rating }}, y: {{ p.discount }} },
-            {% endif %}
-          {% endfor %}
-        ],
-        backgroundColor: "rgba(54, 162, 235, 0.5)",
-        borderColor: "blue",
-        tension: 0.4
-      }]
-    };
+<h2>Скидка на товар vs Рейтинг</h2>
+<canvas id="discountChart" width="600" height="400"></canvas>
 
-    const ratingConfig = {
+<script>
+    function sortTable(field) {
+      const currentOrder = new URLSearchParams(window.location.search).get(`ordering`);
+      const order = currentOrder === field ? '-' + field : field;
+      window.location.search = new URLSearchParams({
+        ...Object.fromEntries(new URLSearchParams(window.location.search)),
+        ordering: order
+      });
+    }
+
+    const ctx1 = document.getElementById('priceChart').getContext('2d');
+    new Chart(ctx1, {
+      type: 'bar',
+      data: {
+        labels: ["0–1K", "1K–5K", "5K–10K", "10K–20K", "20K–50K", "50K+"],
+        datasets: [{
+          label: 'Количество товаров',
+          data: {{ price_counts|safe }},
+          backgroundColor: 'rgba(75, 192, 192, 0.6)',
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: { beginAtZero: true }
+        }
+      }
+    });
+
+    const ctx2 = document.getElementById('discountChart').getContext('2d');
+    new Chart(ctx2, {
       type: 'line',
-      data: ratingData,
+      data: {
+        labels: {{ ratings|safe }},
+        datasets: [{
+          label: 'Скидка (₽)',
+          data: {{ discounts|safe }},
+          borderColor: 'blue',
+          backgroundColor: 'rgba(0, 0, 255, 0.3)',
+          tension: 0.3
+        }]
+      },
       options: {
         responsive: true,
         scales: {
@@ -102,22 +134,50 @@
             type: 'linear',
             min: 0,
             max: 5,
-            title: {
-              display: true,
-              text: "Рейтинг"
-            }
+            title: { display: true, text: 'Рейтинг' }
           },
           y: {
-            title: {
-              display: true,
-              text: "Скидка (₽)"
-            }
+            title: { display: true, text: 'Скидка (₽)' }
           }
         }
       }
-    };
+    });
 
-    new Chart(document.getElementById("ratingChart"), ratingConfig);
-  </script>
+    // noUiSlider
+    const slider = document.getElementById('price-slider');
+    noUiSlider.create(slider, {
+      start: [
+        parseInt('{{ request.GET.min_price|default:price_limits.0 }}'),
+        parseInt('{{ request.GET.max_price|default:price_limits.1 }}')
+      ],
+      connect: true,
+      step: 500,
+      range: {
+        'min': {{ price_limits.0 }},
+        'max': {{ price_limits.1 }}
+      },
+      tooltips: [true, true],
+      format: {
+        to: v => Math.round(v),
+        from: v => Number(v),
+      },
+    });
+
+    const minLabel = document.getElementById('min-price-label');
+    const maxLabel = document.getElementById('max-price-label');
+
+    slider.noUiSlider.on('update', function(values) {
+      minLabel.textContent = values[0];
+      maxLabel.textContent = values[1];
+    });
+
+    slider.noUiSlider.on('change', function(values) {
+      const [min, max] = values;
+      const params = new URLSearchParams(window.location.search);
+      params.set('min_price', min);
+      params.set('max_price', max);
+      window.location.search = params.toString();
+    });
+</script>
 </body>
 </html>
