@@ -1,10 +1,10 @@
 import requests
-from .models import Product
+
+from products.models import Product
+
 
 def parse_wildberries(type_product):
-    headers = {
-        "User-Agent": "Mozilla/5.0"
-    }
+    headers = {"User-Agent": "Mozilla/5.0"}
 
     url = f"https://search.wb.ru/exactmatch/ru/common/v4/search"
     params = {
@@ -37,8 +37,9 @@ def parse_wildberries(type_product):
             rating = item.get("reviewRating", 0)
             reviews = item.get("feedbacks", 0)
 
-
-            if not Product.objects.filter(name=name, price=price, sale_price=sale_price).exists():
+            if not Product.objects.filter(
+                name=name, price=price, sale_price=sale_price
+            ).exists():
                 Product.objects.create(
                     name=name,
                     type_product=type_product,
@@ -48,15 +49,17 @@ def parse_wildberries(type_product):
                     reviews=reviews,
                 )
 
-            result.append({
-                "name": name,
-                "type_product": type_product,
-                "price": price,
-                "sale_price": sale_price,
-                "rating": rating,
-                "reviews": reviews,
-                "discount": price - sale_price,
-            })
+            result.append(
+                {
+                    "name": name,
+                    "type_product": type_product,
+                    "price": price,
+                    "sale_price": sale_price,
+                    "rating": rating,
+                    "reviews": reviews,
+                    "discount": price - sale_price,
+                }
+            )
 
         return result
 
