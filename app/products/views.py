@@ -47,24 +47,20 @@ class ProductTypesView(GenericAPIView):
 
 class DashboardView(View):
     def get(self, request):
-        # Продукты с учётом фильтров
         products = get_filtered_products(request)
 
-        # Добавим поле discount вручную
         for p in products:
             p.discount = (p.price or 0) - (p.sale_price or 0)
 
-        # Все типы продуктов
+
         product_types = get_product_types()
 
-        # Минимальная и максимальная цена
         all_products = Product.objects.all()
         price_limits = [
             all_products.aggregate(Min("price"))["price__min"] or 0,
             all_products.aggregate(Max("price"))["price__max"] or 100000,
         ]
 
-        # Распределение по ценовым диапазонам
         price_buckets = [0, 1000, 5000, 10000, 20000, 50000]
         price_counts = []
         for i in range(len(price_buckets)):
@@ -78,7 +74,6 @@ class DashboardView(View):
                 count = products.filter(price__gte=min_price).count()
             price_counts.append(count)
 
-        # Данные для графика: скидка vs рейтинг
         discount_data = sorted(
             [
                 (p.rating, p.discount)
