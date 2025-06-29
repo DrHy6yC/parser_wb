@@ -1,0 +1,225 @@
+{% extends "index.html" %}
+
+{% block title %}Аналитика товаров{% endblock %}
+
+{% block head %}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.7.0/nouislider.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.7.0/nouislider.min.js"></script>
+  <style>
+    .block {
+      border: 1px solid #ccc;
+      padding: 20px;
+      margin-bottom: 30px;
+    }
+
+    .collapse-btn {
+      margin-bottom: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: center;
+    }
+
+    th {
+      cursor: pointer;
+    }
+  </style>
+{% endblock %}
+
+{% block body %}
+<section class="wrapper">
+  <div class="inner">
+    <h1>Аналитика товаров</h1>
+
+    <!-- Фильтры -->
+    <div class="block">
+      <h3>Фильтр по цене</h3>
+      <p style="margin-bottom: 60px;">
+        Цена: от <b id="min-price-label"></b> ₽ до <b id="max-price-label"></b> ₽
+      </p>
+      <div id="price-slider"></div>
+
+      <form method="get" style="margin-top: 20px;">
+        <label>Рейтинг от:
+          <input type="number" name="min_rating" value="{{ request.GET.min_rating }}" step="0.1"
+                 onchange="this.form.submit()">
+        </label>
+        <label>Отзывов от:
+          <input type="number" name="min_reviews" value="{{ request.GET.min_reviews }}"
+                 onchange="this.form.submit()">
+        </label>
+        <label>Тип продукта:
+          <select name="type_product" onchange="this.form.submit()">
+            <option value="">Все</option>
+            {% for type in product_types %}
+              <option value="{{ type }}" {% if request.GET.type_product == type %}selected{% endif %}>{{ type }}</option>
+            {% endfor %}
+          </select>
+        </label>
+      </form>
+    </div>
+
+    <!-- Таблица -->
+    <div class="block">
+      <button class="collapse-btn" onclick="toggleBlock('products-table')">Свернуть/Показать таблицу</button>
+      <div id="products-table">
+        <table>
+          <thead>
+          <tr>
+            <th onclick="sortTable('name')">Название</th>
+            <th onclick="sortTable('price')">Цена</th>
+            <th onclick="sortTable('sale_price')">Цена со скидкой</th>
+            <th onclick="sortTable('rating')">Рейтинг</th>
+            <th onclick="sortTable('reviews')">Отзывы</th>
+          </tr>
+          </thead>
+          <tbody>
+          {% for p in products %}
+            <tr>
+              <td>{{ p.name }}</td>
+              <td>{{ p.price }}</td>
+              <td>{{ p.sale_price }}</td>
+              <td>{{ p.rating }}</td>
+              <td>{{ p.reviews }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- График по ценам -->
+    <div class="block">
+      <button class="collapse-btn" onclick="toggleBlock('priceChartBlock')">Свернуть/Показать график цен</button>
+      <div id="priceChartBlock">
+        <h2>Распределение товаров по цене</h2>
+        <canvas id="priceChart" width="600" height="400"></canvas>
+      </div>
+    </div>
+
+    <!-- График скидки vs рейтинг -->
+    <div class="block">
+      <button class="collapse-btn" onclick="toggleBlock('discountChartBlock')">Свернуть/Показать график скидок</button>
+      <div id="discountChartBlock">
+        <h2>Скидка на товар vs Рейтинг</h2>
+        <canvas id="discountChart" width="600" height="400"></canvas>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function sortTable(field) {
+    const currentOrder = new URLSearchParams(window.location.search).get("ordering");
+    const order = currentOrder === field ? "-" + field : field;
+    const params = new URLSearchParams(window.location.search);
+    params.set("ordering", order);
+    window.location.search = params.toString();
+  }
+
+  function toggleBlock(id) {
+    const el = document.getElementById(id);
+    if (el.style.display === "none") {
+      el.style.display = "block";
+    } else {
+      el.style.display = "none";
+    }
+  }
+
+  // Инициализация слайдера
+  const slider = document.getElementById("price-slider");
+  noUiSlider.create(slider, {
+    start: [
+      parseInt("{{ request.GET.min_price|default:price_limits.0 }}"),
+      parseInt("{{ request.GET.max_price|default:price_limits.1 }}")
+    ],
+    connect: true,
+    step: 500,
+    range: {
+      min: {{ price_limits.0 }},
+      max: {{ price_limits.1 }}
+    },
+    tooltips: [true, true],
+    format: {
+      to: v => Math.round(v),
+      from: v => Number(v)
+    }
+  });
+
+  const minLabel = document.getElementById("min-price-label");
+  const maxLabel = document.getElementById("max-price-label");
+
+  slider.noUiSlider.on("update", function(values) {
+    minLabel.textContent = values[0];
+    maxLabel.textContent = values[1];
+  });
+
+  slider.noUiSlider.on("change", function(values) {
+    const [min, max] = values;
+    const params = new URLSearchParams(window.location.search);
+    params.set("min_price", min);
+    params.set("max_price", max);
+    window.location.search = params.toString();
+  });
+
+  // Графики
+  const ctx1 = document.getElementById("priceChart").getContext("2d");
+  new Chart(ctx1, {
+    type: "bar",
+    data: {
+      labels: ["0–1K", "1K–5K", "5K–10K", "10K–20K", "20K–50K", "50K+"],
+      datasets: [{
+        label: "Количество товаров",
+        data: {{ price_counts|safe }},
+        backgroundColor: "rgba(75, 192, 192, 0.6)"
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        y: { beginAtZero: true }
+      }
+    }
+  });
+
+  const ctx2 = document.getElementById("discountChart").getContext("2d");
+  new Chart(ctx2, {
+    type: "line",
+    data: {
+      labels: {{ ratings|safe }},
+      datasets: [{
+        label: "Скидка (₽)",
+        data: {{ discounts|safe }},
+        borderColor: "blue",
+        backgroundColor: "rgba(0, 0, 255, 0.3)",
+        tension: 0.3
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        x: {
+          type: "linear",
+          min: 0,
+          max: 5,
+          title: { display: true, text: "Рейтинг" }
+        },
+        y: {
+          title: { display: true, text: "Скидка (₽)" }
+        }
+      }
+    }
+  });
+</script>
+{% endblock %}

@@ -88,7 +88,7 @@ class DashboardView(View):
 
         return render(
             request,
-            "products/dashboard.html",
+            "dashboard.html",
             {
                 "products": products,
                 "product_types": product_types,
