@@ -36,11 +36,21 @@
 {% endblock %}
 
 {% block body %}
-<section class="wrapper">
+<section id="header">
   <div class="inner">
+    <span class="icon solid major fa-cloud"></span>
     <h1>Аналитика товаров</h1>
-
-    <!-- Фильтры -->
+    <p>Тут можно проанализировать товары с WB<br />
+    Посмотреть таблицу со всем ассортиментом,<br />
+    а так же увидеть распределение товаров по цене и график отношения скидки на товар к рейтингу</p>
+    <ul class="actions special">
+        <li><a href="#one" class="button scrolly">К фильтру</a></li>
+    </ul>
+</div>
+</section>
+<section id="one" class="main style1">
+  <div class="inner">
+        <!-- Фильтры -->
     <div class="block">
       <h3>Фильтр по цене</h3>
       <p style="margin-bottom: 60px;">
@@ -48,14 +58,14 @@
       </p>
       <div id="price-slider"></div>
 
-      <form method="get" style="margin-top: 20px;">
+      <form id="filter-form" method="get" style="margin-top: 20px;">
         <label>Рейтинг от:
           <input type="number" name="min_rating" value="{{ request.GET.min_rating }}" step="0.1"
-                 onchange="this.form.submit()">
+                 oninput="submitWithPrice()">
         </label>
         <label>Отзывов от:
           <input type="number" name="min_reviews" value="{{ request.GET.min_reviews }}"
-                 onchange="this.form.submit()">
+                 oninput="submitWithPrice()">
         </label>
         <label>Тип продукта:
           <select name="type_product" onchange="this.form.submit()">
@@ -120,6 +130,31 @@
 
 {% block scripts %}
 <script>
+  function submitWithPrice() {
+    const form = document.getElementById("filter-form");
+    const [min, max] = slider.noUiSlider.get();
+
+    // Удаляем, если уже были в форме
+    form.querySelectorAll("input[name='min_price'], input[name='max_price']").forEach(el => el.remove());
+
+    // Добавляем скрытые поля с текущим диапазоном цен
+    const minInput = document.createElement("input");
+    minInput.type = "hidden";
+    minInput.name = "min_price";
+    minInput.value = Math.round(min);
+
+    const maxInput = document.createElement("input");
+    maxInput.type = "hidden";
+    maxInput.name = "max_price";
+    maxInput.value = Math.round(max);
+
+    form.appendChild(minInput);
+    form.appendChild(maxInput);
+
+    // Отправляем форму
+    form.submit();
+  }
+
   function sortTable(field) {
     const currentOrder = new URLSearchParams(window.location.search).get("ordering");
     const order = currentOrder === field ? "-" + field : field;

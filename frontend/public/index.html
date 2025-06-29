@@ -1,10 +1,38 @@
-<!DOCTYPE html>
-<html lang="ru">
-  <head>
-    <meta charset="UTF-8" />
-    <title>React + Webpack</title>
-  </head>
-  <body>
-    <div id="root"></div>
-  </body>
+<!DOCTYPE HTML>
+<html>
+<head>
+  <title>
+  </title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+
+  <!-- Стили -->
+  <link rel="stylesheet" href="{% static 'assets/css/main.css' %}" />
+  <noscript><link rel="stylesheet" href="{% static 'assets/css/noscript.css' %}" /></noscript>
+
+</head>
+<body class="is-preload">
+  <div id="root"></div>
+  <!-- Footer -->
+  <section id="footer">
+    <ul class="icons">
+      <li><strong>Телеграмм: </strong><a href="https://t.me/Dr_Hy6yC" class="icon brands alt fa-telegram"><span class="label">Telegram</span></a></li>
+      <li><strong>Git: </strong><a href="https://github.com/DrHy6yC" class="icon brands alt fa-github"><span class="label">GitHub</span></a></li>
+      <li><a href="tel:+791813852963" class="icon solid alt fa-phone"><span class="label">Phone: +791813852963</span></a><strong> Телефон: +791813852963 </strong></li>
+      <li><a href="mailto:dr.hy6yc@gmail.com" class="icon solid alt fa-envelope"><span class="label">Email: dr.hy6yc@gmail.com</span></a><strong> Почта: dr.hy6yc@gmail.com</strong></li>
+    </ul>
+    <ul class="copyright">
+      <li>&copy; <a href="https://t.me/Dr_Hy6yC">DrHy6yC</a></li><li>Design: <a href="https://github.com/DrHy6yC">DrHy6yC</a></li>
+    </ul>
+  </section>
+
+  <!-- Скрипты -->
+  <script src="{% static 'assets/js/jquery.min.js' %}"></script>
+  <script src="{% static 'assets/js/jquery.scrolly.min.js' %}"></script>
+  <script src="{% static 'assets/js/browser.min.js' %}"></script>
+  <script src="{% static 'assets/js/breakpoints.min.js' %}"></script>
+  <script src="{% static 'assets/js/util.js' %}"></script>
+  <script src="{% static 'assets/js/main.js' %}"></script>
+
+</body>
 </html>

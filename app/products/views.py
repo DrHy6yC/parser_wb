@@ -79,12 +79,16 @@ class DashboardView(View):
             price_counts.append(count)
 
         # Данные для графика: скидка vs рейтинг
-        ratings = []
-        discounts = []
-        for p in products:
-            if isinstance(p.rating, (int, float)):
-                ratings.append(p.rating)
-                discounts.append(p.discount)
+        discount_data = sorted(
+            [
+                (p.rating, p.discount)
+                for p in products
+                if isinstance(p.rating, (int, float))
+            ],
+            key=lambda x: x[0],
+        )
+        ratings = [x[0] for x in discount_data]
+        discounts = [x[1] for x in discount_data]
 
         return render(
             request,
