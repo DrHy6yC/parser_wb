@@ -1,6 +1,6 @@
 import requests
 
-from products.models import Product
+from .models import Product
 
 
 def parse_wildberries(type_product):

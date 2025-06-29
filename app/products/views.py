@@ -5,10 +5,10 @@ from rest_framework.filters import OrderingFilter
 from rest_framework.generics import GenericAPIView, ListAPIView
 from rest_framework.response import Response
 
-from products.models import Product
-from products.parser import parse_wildberries
-from products.serializers import ProductSerializer
-from products.utils import get_filtered_products, get_product_types
+from .models import Product
+from .parser import parse_wildberries
+from .serializers import ProductSerializer
+from .utils import get_filtered_products, get_product_types
 
 
 class ProductParseView(GenericAPIView):

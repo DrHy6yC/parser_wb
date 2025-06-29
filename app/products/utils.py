@@ -1,4 +1,4 @@
-from products.models import Product
+from .models import Product
 
 
 def get_filtered_products(request):
