@@ -52,7 +52,6 @@ class DashboardView(View):
         for p in products:
             p.discount = (p.price or 0) - (p.sale_price or 0)
 
-
         product_types = get_product_types()
 
         all_products = Product.objects.all()
